@@ -1,47 +1,48 @@
-import java.io.*;
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 
 public class Server {
-    public static void main(String[] args) throws IOException {
-        Cookie getCookie = new Cookie();
-        Random num = new Random();
-        String cookieText;
+    private ServerSocket serverSocket;
 
-        // create server
-        System.out.println("Listen to port 3000: ");
-        ServerSocket server = new ServerSocket(3000);
-        Socket socket = server.accept();
+    public Server(ServerSocket serverSocket) {
+        this.serverSocket = serverSocket;
+    }
 
-        try(InputStream is = socket.getInputStream() ){
-            DataInputStream dis = new DataInputStream(new BufferedInputStream(is));
-            String command = "";
-//            if (command.equals("get-cookie")){
-//                System.out.println(cookieText);
-//            }
-//
-//            else if (command.equals("close")){
-//                socket.close();
 
-            while (!command.equals("close")){
-                command = dis.readUTF();
-                cookieText = getCookie.generateCookie().get(num.nextInt(10));
-//                if (command.equals("get-cookie")) System.out.println(cookieText); // try to print out the text for testing
+    public void starServer(){
 
-                //if you get request for "get-cookie", reply the cookie text to the client console
-                if (command.equals("get-cookie")){
-                        OutputStream os = socket.getOutputStream();
-                        DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(os));
-                        dos.writeUTF(cookieText);
-                        dos.flush();
-                    }
-                }
-            } catch (EOFException e){
-            socket.close();
+        try{
+            while (!serverSocket.isClosed()){
+                Socket socket = serverSocket.accept();
+                ClientHandler clientHandler = new ClientHandler(socket);
+
+                System.out.println("A new client is connected!");
+                Thread thread = new Thread(clientHandler);
+                thread.start();
+            }
+        }catch (IOException e){
+            closeServerSocket();
         }
-        socket.close();
-        server.close();
 
+    }
+
+    public void closeServerSocket(){
+        try{
+            if (serverSocket != null){
+                serverSocket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public static void main(String[] args) throws IOException {
+        System.out.println("Listen to port 3000: ");
+        ServerSocket serverSocket = new ServerSocket(3000);
+        Server server = new Server(serverSocket);
+        server.starServer();
     }
 }
