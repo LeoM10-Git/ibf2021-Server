@@ -7,20 +7,20 @@ public class ClientHandler implements  Runnable{
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     private Socket socket;
     private String clientUsername;
-    private BufferedReader bufferedReader;
-    private BufferedWriter bufferedWriter;
+    private DataInputStream dis;
+    private DataOutputStream dos;
 
     public ClientHandler(Socket socket){
 
         try{
             this.socket = socket;
-            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            this.clientUsername = bufferedReader.readLine();
+            this.dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            this.dis = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
+            this.clientUsername = dis.readUTF();
             clientHandlers.add(this);
             broadcastMessage("SERVER: " + clientUsername + " has entered the chat!");
         }catch (NullPointerException | IOException | ConcurrentModificationException cme ){
-            closeAll(socket, bufferedWriter, bufferedReader);
+            closeAll(socket, dos, dis);
         }
     }
 
@@ -29,10 +29,11 @@ public class ClientHandler implements  Runnable{
         String messageFromClient;
         while (socket.isConnected()){
                 try {
-                    messageFromClient = bufferedReader.readLine();
+                    System.out.println("A new client is connected!");
+                    messageFromClient = dis.readUTF();
                     broadcastMessage(messageFromClient);
                 } catch (NullPointerException | IOException | ConcurrentModificationException cme) {
-                    closeAll(socket, bufferedWriter, bufferedReader);
+                    closeAll(socket, dos, dis);
                     break;
                 }
         }
@@ -42,9 +43,8 @@ public class ClientHandler implements  Runnable{
         for (ClientHandler clientHandler:clientHandlers){
             try{
                 if (!clientHandler.clientUsername.equals(clientUsername)){
-                    clientHandler.bufferedWriter.write(messageToSend);
-                    clientHandler.bufferedWriter.newLine();
-                    clientHandler.bufferedWriter.flush();
+                    clientHandler.dos.writeUTF(messageToSend);
+                    clientHandler.dos.flush();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -60,14 +60,14 @@ public class ClientHandler implements  Runnable{
 
 
     // close socket, writer and reader
-    public void closeAll(Socket socket, BufferedWriter bufferedWriter, BufferedReader bufferedReader){
+    public void closeAll(Socket socket, DataOutputStream dos, DataInputStream dis){
         removeClientHandler();
         try{
-            if (bufferedReader != null){
-                bufferedReader.close();
+            if (dis != null){
+                dis.close();
             }
-            if (bufferedWriter != null){
-                bufferedWriter.close();
+            if (dos != null){
+                dos.close();
             }
             if (socket != null){
                 socket.close();

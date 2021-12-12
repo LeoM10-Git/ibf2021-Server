@@ -5,37 +5,35 @@ import java.util.Scanner;
 public class Client {
 
     private Socket socket;
-    private BufferedReader bufferedReader;
-    private BufferedWriter bufferedWriter;
+    private DataInputStream dis;
+    private DataOutputStream dos;
     private String username;
 
 
     public Client(Socket socket, String username) {
         try {
             this.socket = socket;
-            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.dos = new DataOutputStream(new BufferedOutputStream(socket.getOutputStream()));
+            this.dis = new DataInputStream(new BufferedInputStream(socket.getInputStream()));
             this.username = username;
         } catch (IOException e) {
-            close(socket, bufferedWriter, bufferedReader);
+            closeAll(socket, dos, dis);
         }
     }
 
     public void sendMessage(){
         try{
-            bufferedWriter.write(username);
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
+            dos.writeUTF(username);
+            dos.flush();
 
             Scanner scanner = new Scanner(System.in);
             while (socket.isConnected()){
                 String messageToSend = scanner.nextLine();
-                bufferedWriter.write(username + ": " + messageToSend);
-                bufferedWriter.newLine();
-                bufferedWriter.flush();
+                dos.writeUTF(username + ": " + messageToSend);
+                dos.flush();
             }
         }catch (IOException e){
-            close(socket, bufferedWriter, bufferedReader);
+            closeAll(socket, dos, dis);
         }
     }
 
@@ -44,36 +42,36 @@ public class Client {
             String messageFromGroup;
             while (socket.isConnected()){
                 try{
-                    messageFromGroup = bufferedReader.readLine();
+                    messageFromGroup = dis.readUTF();
                     System.out.println(messageFromGroup);
                 } catch (IOException e) {
-                    close(socket, bufferedWriter, bufferedReader);
+                    closeAll(socket, dos, dis);
                 }
             }
         }).start();
     }
 
-        public void close(Socket socket, BufferedWriter bufferedWriter, BufferedReader bufferedReader){
-            try{
-                if (bufferedReader != null){
-                    bufferedReader.close();
-                }
-                if (bufferedWriter != null){
-                    bufferedWriter.close();
-                }
-                if (socket != null){
-                    socket.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+    public void closeAll(Socket socket, DataOutputStream dos, DataInputStream dis){
+        try{
+            if (dis != null){
+                dis.close();
             }
+            if (dos != null){
+                dos.close();
+            }
+            if (socket != null){
+                socket.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) throws IOException {
         Socket socket = new Socket("localhost", 3000);
-        Scanner scanner = new Scanner(System.in);
         System.out.print("Enter your username for the group chat: ");
-        String username = scanner.nextLine();
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        String username = br.readLine();
 
         Client client = new Client(socket, username);
         client.listenForMessage();

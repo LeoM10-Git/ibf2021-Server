@@ -16,13 +16,12 @@ public class Server {
     public void starServer(){
 
         try{
+            ExecutorService threadPool = Executors.newFixedThreadPool(3);
             while (!serverSocket.isClosed()){
                 Socket socket = serverSocket.accept();
-                ClientHandler clientHandler = new ClientHandler(socket);
 
-                System.out.println("A new client is connected!");
-                Thread thread = new Thread(clientHandler);
-                thread.start();
+                ClientHandler clientHandler = new ClientHandler(socket);
+                threadPool.submit(clientHandler);
             }
         }catch (IOException e){
             closeServerSocket();
